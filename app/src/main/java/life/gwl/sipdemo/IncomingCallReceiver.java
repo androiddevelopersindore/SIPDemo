@@ -1,39 +1,30 @@
-/*
- * Copyright (C) 2010 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 package life.gwl.sipdemo;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.net.sip.SipAudioCall;
 import android.net.sip.SipProfile;
+import android.util.Log;
 
-/**
- * Listens for incoming SIP calls, intercepts and hands them off to WalkieTalkieActivity.
- */
+/*
+*
+*
+* */
 public class IncomingCallReceiver extends BroadcastReceiver {
-    /**
-     * Processes the incoming call, answers it, and hands it over to the
-     * WalkieTalkieActivity.
-     * @param context The context under which the receiver is running.
-     * @param intent The intent being received.
-     */
+    private String Tag="IncomingCallReceiver";
+    private Uri alarmUri;
+
+    /*
+    *
+    *
+    * */
     @Override
-    public void onReceive(Context context, Intent intent) {
+    public void onReceive(final Context context, Intent intent) {
         SipAudioCall incomingCall = null;
         try {
 
@@ -41,16 +32,38 @@ public class IncomingCallReceiver extends BroadcastReceiver {
                 @Override
                 public void onRinging(SipAudioCall call, SipProfile caller) {
                     try {
+                        playRingTone(context);
                         call.answerCall(30);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        Log.w(Tag, "Exception while ringing the call");
+                        Log.e(Tag,"name :"+e);
                     }
+                }
+
+                @Override
+                public void onCalling(SipAudioCall call) {
+                    super.onCalling(call);
+                }
+
+                @Override
+                public void onCallBusy(SipAudioCall call) {
+                    super.onCallBusy(call);
+                }
+
+                @Override
+                public void onCallEnded(SipAudioCall call) {
+                    super.onCallEnded(call);
+                }
+
+                @Override
+                public void onCallEstablished(SipAudioCall call) {
+                    super.onCallEstablished(call);
                 }
             };
 
-            WalkieTalkieActivity wtActivity = (WalkieTalkieActivity) context;
+            WalkieTalkieActivity mWalkieTalkieActivity = (WalkieTalkieActivity) context;
 
-            incomingCall = wtActivity.manager.takeAudioCall(intent, listener);
+            incomingCall = mWalkieTalkieActivity.mSipManager.takeAudioCall(intent, listener);
             incomingCall.answerCall(30);
             incomingCall.startAudio();
             incomingCall.setSpeakerMode(true);
@@ -58,15 +71,26 @@ public class IncomingCallReceiver extends BroadcastReceiver {
                 incomingCall.toggleMute();
             }
 
-            wtActivity.call = incomingCall;
+            mWalkieTalkieActivity.mSipAudioCall = incomingCall;
 
-            wtActivity.updateStatus(incomingCall);
+            mWalkieTalkieActivity.updateStatus(incomingCall);
 
         } catch (Exception e) {
             if (incomingCall != null) {
                 incomingCall.close();
             }
+            Log.w(Tag,"unable to handle call");
+            Log.e(Tag, "Name :"+e.getMessage());
         }
     }
+
+    private void playRingTone(Context context) {
+        if (alarmUri == null) {
+            alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+        }
+        Ringtone ringtone = RingtoneManager.getRingtone(context, alarmUri);
+        ringtone.play();
+    }
+
 
 }

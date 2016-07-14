@@ -1,22 +1,9 @@
 /*
- * Copyright (C) 2010 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+*
+*
+* */
 package life.gwl.sipdemo;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.PendingIntent;
@@ -24,11 +11,21 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.net.sip.SipAudioCall;
+import android.net.sip.SipException;
+import android.net.sip.SipManager;
+import android.net.sip.SipProfile;
+import android.net.sip.SipRegistrationListener;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.*;
-import android.net.sip.*;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.ToggleButton;
@@ -38,46 +35,69 @@ import java.text.ParseException;
 /**
  * Handles all calling, receiving calls, and UI interaction in the WalkieTalkie app.
  */
-public class WalkieTalkieActivity extends Activity implements View.OnTouchListener {
+public class WalkieTalkieActivity extends AppCompatActivity implements View.OnTouchListener {
 
     public String sipAddress = null;
 
-    public SipManager manager = null;
-    public SipProfile me = null;
-    public SipAudioCall call = null;
-    public IncomingCallReceiver callReceiver;
+    public SipManager mSipManager = null;
+    public SipProfile mSipProfile = null;
+    public SipAudioCall mSipAudioCall = null;
+    public IncomingCallReceiver mIncomingCallReceiver;
 
     private static final int CALL_ADDRESS = 1;
     private static final int SET_AUTH_INFO = 2;
     private static final int UPDATE_SETTINGS_DIALOG = 3;
     private static final int HANG_UP = 4;
     private String Tag = "WalkieActivity";
-
+/*
+*
+* */
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.walkietalkie);
-
-        ToggleButton pushToTalkButton = (ToggleButton) findViewById(R.id.pushToTalk);
-        pushToTalkButton.setOnTouchListener(this);
-
-        // Set up the intent filter.  This will be used to fire an
-        // IncomingCallReceiver when someone calls the SIP address used by this
-        // application.
-        IntentFilter filter = new IntentFilter();
-        filter.addAction("android.SipDemo.INCOMING_CALL");
-        callReceiver = new IncomingCallReceiver();
-        this.registerReceiver(callReceiver, filter);
-
-        // "Push to talk" can be a serious pain when the screen keeps turning off.
-        // Let's prevent that.
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
+        init();
+        initIncomingCallReceiver();
+        keepScreenOn();
         initializeManager();
     }
 
+    /*
+    *
+    * */
+    private void keepScreenOn() {
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+    }
+
+    /*
+    *
+    *
+    * */
+    private void initIncomingCallReceiver() {
+        IntentFilter filter = new IntentFilter();
+        filter.addAction("android.SipDemo.INCOMING_CALL");
+        mIncomingCallReceiver = new IncomingCallReceiver();
+        this.registerReceiver(mIncomingCallReceiver, filter);
+
+    }
+
+    /*
+    *
+    *
+    * */
+    private void init() {
+        ToggleButton pushToTalkButton = (ToggleButton) findViewById(R.id.pushToTalk);
+        pushToTalkButton.setOnTouchListener(this);
+
+    }
+
+    /*
+    *
+    *
+    * */
     @Override
     public void onStart() {
         super.onStart();
@@ -86,23 +106,31 @@ public class WalkieTalkieActivity extends Activity implements View.OnTouchListen
         initializeManager();
     }
 
+    /*
+    *
+    *
+    * */
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (call != null) {
-            call.close();
+        if (mSipAudioCall != null) {
+            mSipAudioCall.close();
         }
 
         closeLocalProfile();
 
-        if (callReceiver != null) {
-            this.unregisterReceiver(callReceiver);
+        if (mIncomingCallReceiver != null) {
+            this.unregisterReceiver(mIncomingCallReceiver);
         }
     }
 
+    /*
+    *
+    *
+    * */
     public void initializeManager() {
-        if(manager == null) {
-          manager = SipManager.newInstance(this);
+        if (mSipManager == null) {
+            mSipManager = SipManager.newInstance(this);
         }
 
         initializeLocalProfile();
@@ -113,11 +141,11 @@ public class WalkieTalkieActivity extends Activity implements View.OnTouchListen
      * send SIP calls to for your SIP address.
      */
     public void initializeLocalProfile() {
-        if (manager == null) {
+        if (mSipManager == null) {
             return;
         }
 
-        if (me != null) {
+        if (mSipProfile != null) {
             closeLocalProfile();
         }
 
@@ -134,34 +162,44 @@ public class WalkieTalkieActivity extends Activity implements View.OnTouchListen
         try {
             SipProfile.Builder builder = new SipProfile.Builder(username, domain);
             builder.setPassword(password);
-            me = builder.build();
+            mSipProfile = builder.build();
 
             Intent i = new Intent();
             i.setAction("android.SipDemo.INCOMING_CALL");
             PendingIntent pi = PendingIntent.getBroadcast(this, 0, i, Intent.FILL_IN_DATA);
-            manager.open(me, pi, null);
+            mSipManager.open(mSipProfile, pi, null);
 
 
-            // This listener must be added AFTER manager.open is called,
+            // This listener must be added AFTER mSipManager.open is called,
             // Otherwise the methods aren't guaranteed to fire.
 
-            manager.setRegistrationListener(me.getUriString(), new SipRegistrationListener() {
-                    public void onRegistering(String localProfileUri) {
-                        updateStatus("Registering with SIP Server...");
-                    }
+            mSipManager.setRegistrationListener(mSipProfile.getUriString(), new SipRegistrationListener() {
+                public void onRegistering(String localProfileUri) {
+                    Log.i(Tag, "Registering with SIP Server...");
+                    updateStatus("Registering with SIP Server...");
+                }
 
-                    public void onRegistrationDone(String localProfileUri, long expiryTime) {
-                        updateStatus("Ready");
-                    }
+                public void onRegistrationDone(String localProfileUri, long expiryTime) {
+                    updateStatus("Ready");
+                    Log.i(Tag, "Ready");
+                }
 
-                    public void onRegistrationFailed(String localProfileUri, int errorCode,
-                            String errorMessage) {
-                        updateStatus("Registration failed.  Please check settings.");
-                    }
-                });
+                public void onRegistrationFailed(String localProfileUri, int errorCode,
+                                                 String errorMessage) {
+                    updateStatus("Registration failed.  Please check settings.");
+                    Log.w(Tag, "Registration failed.  Please check settings.");
+                    Log.e(Tag, "Error Code :" + errorCode);
+                    Log.e(Tag, "Error Message :" + errorMessage);
+                }
+            });
         } catch (ParseException pe) {
+            Log.w(Tag, " User information is not set");
+            Log.e(Tag, " Name :" + pe.getMessage());
             updateStatus("Connection Error.");
         } catch (SipException se) {
+            Log.w(Tag, " unable to register sip manager");
+            Log.e(Tag, " Name :" + se.getMessage());
+
             updateStatus("Connection error.");
         }
     }
@@ -171,12 +209,12 @@ public class WalkieTalkieActivity extends Activity implements View.OnTouchListen
      * and unregistering your device from the server.
      */
     public void closeLocalProfile() {
-        if (manager == null) {
+        if (mSipManager == null) {
             return;
         }
         try {
-            if (me != null) {
-                manager.close(me.getUriString());
+            if (mSipProfile != null) {
+                mSipManager.close(mSipProfile.getUriString());
             }
         } catch (Exception ee) {
             Log.d(Tag, "Failed to close local profile.", ee);
@@ -184,17 +222,17 @@ public class WalkieTalkieActivity extends Activity implements View.OnTouchListen
     }
 
     /**
-     * Make an outgoing call.
+     * Make an outgoing mSipAudioCall.
      */
-    public void initiateCall() {
+    public void makeOutgoingcall() {
 
         updateStatus(sipAddress);
 
         try {
             SipAudioCall.Listener listener = new SipAudioCall.Listener() {
                 // Much of the client's interaction with the SIP Stack will
-                // happen via listeners.  Even making an outgoing call, don't
-                // forget to set up a listener to set things up once the call is established.
+                // happen via listeners.  Even making an outgoing mSipAudioCall, don't
+                // forget to set up a listener to set things up once the mSipAudioCall is established.
                 @Override
                 public void onCallEstablished(SipAudioCall call) {
                     call.startAudio();
@@ -209,28 +247,28 @@ public class WalkieTalkieActivity extends Activity implements View.OnTouchListen
                 }
             };
 
-            call = manager.makeAudioCall(me.getUriString(), sipAddress, listener, 30);
+            mSipAudioCall = mSipManager.makeAudioCall(mSipProfile.getUriString(), sipAddress, listener, 30);
 
-        }
-        catch (Exception e) {
-            Log.i(Tag, "Error when trying to close manager.", e);
-            if (me != null) {
+        } catch (Exception e) {
+            Log.i(Tag, "Error when trying to close mSipManager.", e);
+            if (mSipProfile != null) {
                 try {
-                    manager.close(me.getUriString());
+                    mSipManager.close(mSipProfile.getUriString());
                 } catch (Exception ee) {
                     Log.i(Tag,
-                            "Error when trying to close manager.", ee);
+                            "Error when trying to close mSipManager.", ee);
                     ee.printStackTrace();
                 }
             }
-            if (call != null) {
-                call.close();
+            if (mSipAudioCall != null) {
+                mSipAudioCall.close();
             }
         }
     }
 
     /**
      * Updates the status box at the top of the UI with a messege of your choice.
+     *
      * @param status The String to display in the status box.
      */
     public void updateStatus(final String status) {
@@ -244,31 +282,34 @@ public class WalkieTalkieActivity extends Activity implements View.OnTouchListen
     }
 
     /**
-     * Updates the status box with the SIP address of the current call.
-     * @param call The current, active call.
+     * Updates the status box with the SIP address of the current mSipAudioCall.
+     *
+     * @param call The current, active mSipAudioCall.
      */
     public void updateStatus(SipAudioCall call) {
         String useName = call.getPeerProfile().getDisplayName();
-        if(useName == null) {
-          useName = call.getPeerProfile().getUserName();
+        if (useName == null) {
+            useName = call.getPeerProfile().getUserName();
         }
         updateStatus(useName + "@" + call.getPeerProfile().getSipDomain());
     }
 
     /**
      * Updates whether or not the user's voice is muted, depending on whether the button is pressed.
-     * @param v The View where the touch event is being fired.
+     *
+     * @param v     The View where the touch event is being fired.
      * @param event The motion to act on.
      * @return boolean Returns false to indicate that the parent view should handle the touch event
      * as it normally would.
      */
     public boolean onTouch(View v, MotionEvent event) {
-        if (call == null) {
+
+        if (mSipAudioCall == null) {
             return false;
-        } else if (event.getAction() == MotionEvent.ACTION_DOWN && call != null && call.isMuted()) {
-            call.toggleMute();
-        } else if (event.getAction() == MotionEvent.ACTION_UP && !call.isMuted()) {
-            call.toggleMute();
+        } else if (event.getAction() == MotionEvent.ACTION_DOWN && mSipAudioCall != null && mSipAudioCall.isMuted()) {
+            mSipAudioCall.toggleMute();
+        } else if (event.getAction() == MotionEvent.ACTION_UP && !mSipAudioCall.isMuted()) {
+            mSipAudioCall.toggleMute();
         }
         return false;
     }
@@ -290,14 +331,14 @@ public class WalkieTalkieActivity extends Activity implements View.OnTouchListen
                 updatePreferences();
                 break;
             case HANG_UP:
-                if(call != null) {
+                if (mSipAudioCall != null) {
                     try {
-                      call.endCall();
+                        mSipAudioCall.endCall();
                     } catch (SipException se) {
                         Log.d("WalkieActivity",
-                                "Error ending call.", se);
+                                "Error ending mSipAudioCall.", se);
                     }
-                    call.close();
+                    mSipAudioCall.close();
                 }
                 break;
         }
@@ -320,16 +361,16 @@ public class WalkieTalkieActivity extends Activity implements View.OnTouchListen
                                         EditText textField = (EditText)
                                                 (textBoxView.findViewById(R.id.calladdress_edit));
                                         sipAddress = textField.getText().toString();
-                                        initiateCall();
+                                        makeOutgoingcall();
 
                                     }
-                        })
+                                })
                         .setNegativeButton(
                                 android.R.string.cancel, new DialogInterface.OnClickListener() {
                                     public void onClick(DialogInterface dialog, int whichButton) {
                                         // Noop.
                                     }
-                        })
+                                })
                         .create();
 
             case UPDATE_SETTINGS_DIALOG:
@@ -345,7 +386,7 @@ public class WalkieTalkieActivity extends Activity implements View.OnTouchListen
                                     public void onClick(DialogInterface dialog, int whichButton) {
                                         // Noop.
                                     }
-                        })
+                                })
                         .create();
         }
         return null;
