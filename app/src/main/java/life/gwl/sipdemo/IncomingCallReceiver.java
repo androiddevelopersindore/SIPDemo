@@ -17,7 +17,7 @@ import android.util.Log;
 * */
 public class IncomingCallReceiver extends BroadcastReceiver {
     private String Tag="IncomingCallReceiver";
-    private Uri alarmUri;
+    private Uri mUriRingtone;
 
     /*
     *
@@ -85,10 +85,10 @@ public class IncomingCallReceiver extends BroadcastReceiver {
     }
 
     private void playRingTone(Context context) {
-        if (alarmUri == null) {
-            alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+        if (mUriRingtone == null) {
+            mUriRingtone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
         }
-        Ringtone ringtone = RingtoneManager.getRingtone(context, alarmUri);
+        Ringtone ringtone = RingtoneManager.getRingtone(context, mUriRingtone);
         ringtone.play();
     }
 

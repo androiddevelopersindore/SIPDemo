@@ -1,6 +1,6 @@
 /*
 *
-*
+*@auther rajendra
 * */
 package life.gwl.sipdemo;
 
@@ -85,7 +85,7 @@ public class WalkieTalkieActivity extends AppCompatActivity implements View.OnTo
     }
 
     /*
-    *
+    *initialize the UI
     *
     * */
     private void init() {
@@ -96,19 +96,19 @@ public class WalkieTalkieActivity extends AppCompatActivity implements View.OnTo
 
     /*
     *
-    *
+    *When we get back from the preference setting Activity, assume
+     *  settings have changed, and re-login with new auth info
     * */
     @Override
     public void onStart() {
         super.onStart();
-        // When we get back from the preference setting Activity, assume
-        // settings have changed, and re-login with new auth info.
         initializeManager();
     }
 
     /*
     *
-    *
+    * disconnect the SipAudiocall, if call is going
+    * un register incoming call receiver
     * */
     @Override
     public void onDestroy() {
@@ -125,7 +125,7 @@ public class WalkieTalkieActivity extends AppCompatActivity implements View.OnTo
     }
 
     /*
-    *
+    * it initial the sip manager
     *
     * */
     public void initializeManager() {
@@ -136,10 +136,10 @@ public class WalkieTalkieActivity extends AppCompatActivity implements View.OnTo
         initializeLocalProfile();
     }
 
-    /**
-     * Logs you into your SIP provider, registering this device as the location to
-     * send SIP calls to for your SIP address.
-     */
+    /*
+    * this register the SipManager with credentail present in preference and set the registration listener
+    * thorough SipManager
+    * */
     public void initializeLocalProfile() {
         if (mSipManager == null) {
             return;
@@ -191,6 +191,7 @@ public class WalkieTalkieActivity extends AppCompatActivity implements View.OnTo
                     Log.e(Tag, "Error Code :" + errorCode);
                     Log.e(Tag, "Error Message :" + errorMessage);
                 }
+
             });
         } catch (ParseException pe) {
             Log.w(Tag, " User information is not set");
@@ -208,6 +209,7 @@ public class WalkieTalkieActivity extends AppCompatActivity implements View.OnTo
      * Closes out your local profile, freeing associated objects into memory
      * and unregistering your device from the server.
      */
+
     public void closeLocalProfile() {
         if (mSipManager == null) {
             return;
@@ -391,6 +393,9 @@ public class WalkieTalkieActivity extends AppCompatActivity implements View.OnTo
         }
         return null;
     }
+    /*
+    * update the preference through preference activity
+    * */
 
     public void updatePreferences() {
         Intent settingsActivity = new Intent(getBaseContext(),
