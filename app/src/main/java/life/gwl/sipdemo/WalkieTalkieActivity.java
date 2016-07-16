@@ -65,7 +65,7 @@ public class WalkieTalkieActivity extends AppCompatActivity implements View.OnTo
     }
 
     /*
-    *
+    *it keep the screen on while taking
     * */
     private void keepScreenOn() {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -73,7 +73,7 @@ public class WalkieTalkieActivity extends AppCompatActivity implements View.OnTo
     }
 
     /*
-    *
+    *Incoming call receiver is use to receive the sip call.
     *
     * */
     private void initIncomingCallReceiver() {
@@ -85,7 +85,7 @@ public class WalkieTalkieActivity extends AppCompatActivity implements View.OnTo
     }
 
     /*
-    *initialize the UI
+    *initialize the UI mainly the toogle button which mute/unmute the walkli-talki while talking
     *
     * */
     private void init() {
@@ -125,7 +125,7 @@ public class WalkieTalkieActivity extends AppCompatActivity implements View.OnTo
     }
 
     /*
-    * it initial the sip manager
+    * it initial the sip manager and sip user profile.
     *
     * */
     public void initializeManager() {
@@ -138,7 +138,7 @@ public class WalkieTalkieActivity extends AppCompatActivity implements View.OnTo
 
     /*
     * this register the SipManager with credentail present in preference and set the registration listener
-    * thorough SipManager
+    * thorough SipManager. It regsiter the sip manager  with save credentials.
     * */
     public void initializeLocalProfile() {
         if (mSipManager == null) {
