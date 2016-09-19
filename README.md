@@ -1,3 +1,4 @@
+
 # SIP (Session Initiation Protocol)
 
 SIP stands for (Session Initiation Protocol). It is a protocol that let applications easily set up outgoing and incoming voice calls, without having to manage sessions, transport-level communication, or audio record or playback directly.
@@ -20,4 +21,16 @@ SipSession
 
 Represents a SIP session that is associated with a SIP dialog or a standalone transaction not within a dialog
  
-Here  I create  simple walkitalki application, with the  help  of https://developer.android.com/index.html  tutorial. 
+Here  I create  simple walkitalki application, with the  help  of https://developer.android.com/index.html  tutorial.
+ 
+ here are the screenhots 
+ 
+ 
+ ![GitHub Logo](device-2016-07-23-123058.png)
+ 
+ ![GitHub Logo](device-2016-07-23-123220.png)
+ 
+ ![GitHub Logo](device-2016-07-23-123248.png)
+ 
+ ![GitHub Logo](device-2016-07-23-123304.png)
+ 
